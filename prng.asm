@@ -11,15 +11,31 @@
 		IN		TIMERCD
 		ORI		0C0h
 		OUT		TIMERCD
-LOOP	IN		TIMERCD
-		OUT		LEDS
-		IN		TIMERLO
-		MOV	E,A
-		IN		TIMERHI
-		ANI		3fh
-		MOV	D,A
-		MVI		C,LEDHEX
+; Wait for a keypad key to be pressed.
+		MVI		C,KEYIN
 		CALL	MOS
+; Load the current timer LSB.
+		IN		TIMERLO
+; Prepare the counter for the loop to fill the reserved bytes for the random sequence.
+		LXI		H,RNDNMS
+		MVI		C,32h
+; Loop, each time loading a value of 0-3 into a reserved memory location.
+; The PRNG value is left-shifted and XOR'd with a constant each iteration.
+LOOP	MOV	B,A
+		ANI		03h
+		MOV	M,A
+		MOV	A,B
+		RLC
+		JNC		NOXOR
+		XRI		0A6h
+NOXOR	INX		H
+		DCR		C
+		JNZ		LOOP
+; Display the 50 chosen random values to the serial console, separated by NL and CR.
+		LXI		H,RNDNMS
+		MVI		B,32h
+DSPLAY	MVI		D,0h
+		MOV	E,M
 		MVI		C,UPRINT
 		CALL	MOS
 		MVI		C,CONOUT
@@ -27,17 +43,9 @@ LOOP	IN		TIMERCD
 		CALL	MOS
 		MVI		E,0Dh
 		CALL	MOS
-		IN		TIMERHI
-		ANI		0C0h
-		RLC
-		RLC
-		MOV	E,A
-		MVI		C,DDATA
-		CALL	MOS
-		MVI		C,DELAY
-		LXI		H,0FFFFh
-		CALL	MOS
-		JMP		LOOP
+		INX		H
+		DCR		B
+		JNZ		DSPLAY
 		RST		7
 
 ; MOS Services
@@ -66,5 +74,8 @@ TIMERCD	EQU		10h
 TIMERLO	EQU		14h
 TIMERHI	EQU		15h
 LEDS	EQU		11h
+
+; Storage
+RNDNMS	DS		32h
 
 		END
