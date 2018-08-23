@@ -15,7 +15,7 @@
 		CMA
 		OUT		LEDS
 ; Set timer and start. Timer used for PRNG.
-		MVI		A,0FFh
+START	MVI		A,0FFh
 		OUT		TIMERLO
 		IN		TIMERHI
 		ORI		03Fh
@@ -33,12 +33,14 @@
 		LXI		D,SPLASH
 		CALL	MOS
 ; Wait for "y" key to be pressed to start the game or any other key to return to MOS.
-		MVI		C,CONIN
+KEYPOLL	MVI		C,CONIN
 		CALL	MOS
 		MOV	A,L
 		CPI		079h
 		JZ		PRNG
-		RST		7			; End and return to MOS.
+		CPI		06eh
+		JZ		RETMOS
+		JMP		KEYPOLL
 ; Generate the random number sequence.
 PRNG	LXI		H,RNDNMS
 		MVI		C,032h
@@ -131,6 +133,7 @@ RPTSEQ	PUSH	B
 		MVI		A,MAXSCOR	; Move the maximum possible score into the accumulator.
 		CMP	M			; Compare with the current sequence length.
 		JNZ		STRSEQ		; Not yet at maximum? Allow the player to continue.
+		JMP		START
 		RST		7			; End and return to MOS.
 ULOSE	MVI		C,PITCH
 		LXI		D,LOSS
@@ -141,6 +144,13 @@ ULOSE	MVI		C,PITCH
 		MVI		C,PITCH
 		LXI		D,0h
 		CALL	MOS
+		MVI		C,DELAY
+		LXI		H,0FFFFh
+		CALL	MOS
+		MVI		C,DELAY
+		LXI		H,0FFFFh
+		CALL	MOS
+		JMP		START
 RETMOS	RST		7
 ; Subroutines
 P_GRN	CALL	F_GRN
