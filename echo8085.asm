@@ -1,6 +1,7 @@
 ; ECHO8085
 ; A Simon-like game for the EMAC "The PRIMER" 8085 Trainer.
-; Written in 8085 Assembly.
+; Written in Intel 8085 Assembly Language.
+; Uses EMAC MOS v2.7 ROM calls.
 ; Christopher Fox
 ; April 2015
 
@@ -38,7 +39,6 @@
 		CPI		079h
 		JZ		PRNG
 		RST		7			; End and return to MOS.
-; Start of the game code. Just testing stuff for now.
 ; Generate the random number sequence.
 PRNG	LXI		H,RNDNMS
 		MVI		C,032h
@@ -57,6 +57,12 @@ NOXOR	INX		H
 GAME	MVI		C,PSTR
 		LXI		D,GAMEBD
 		CALL	MOS
+		MVI		C,CONIN		; Wait for the player to press a key.
+		CALL	MOS
+		MVI		C,PSTR
+		LXI		D,SCOREBD
+		CALL	MOS
+		
 ; Load the starting sequence length, 1.
 		LXI		H,SEQLEN
 		MVI		M,01h
@@ -89,6 +95,8 @@ RPTSEQ	PUSH	B
 		MVI		C,CONIN		; Wait for the player to press a key,
 		CALL	MOS			; and store the ASCII value in L.
 		MOV	A,L			; Move the value into the accumulator for comparisons.
+		CPI		071h		; Did the player press "q" to Quit?
+		JZ		RETMOS		; Return to MOS.
 		CPI		031h		; Did the player press "1" for Yellow?
 		CZ		P_YLW
 		CPI		032h		; Did the player press "2" for Blue?
@@ -107,14 +115,20 @@ RPTSEQ	PUSH	B
 		INX		D			; Increment DE, moving to the next random number in the sequence.
 		DCR		C			; Decrement C, the counter for this iteration through the sequence.
 		JNZ		RPTSEQ		; If we're not at the end of the sequence, repeat with the next entry.
-		;MVI		C,DELAY		; A delay between the sequences, temporary until player repeat portion is written.
-		;LXI		H,03FFFh		; A big delay value.
-		;CALL	MOS			;
-		;CALL	MOS			; Twice.
 ; If the player repeats correctly.
+		MVI		C,DELAY
+		LXI		H,0FFFFh
+		CALL	MOS
+		MVI		C,PSTR
+		LXI		D,SCOREBD
+		CALL	MOS
 		LXI		H,SEQLEN	; Move the memory address for the current sequence length (aka score) into HL.
+		MVI		C,UPRINT
+		MOV	E,M
+		MVI		D,0h
+		CALL	MOS
 		INR		M			; Increment the value in the memory location, adding one to the player's score and length of the sequence.
-		MVI		A,08h		; Move the maximum possible score into the accumulator.
+		MVI		A,07h		; Move the maximum possible score into the accumulator.
 		CMP	M			; Compare with the current sequence length.
 		JNZ		STRSEQ		; Not yet at maximum? Allow the player to continue.
 		RST		7			; End and return to MOS.
@@ -127,7 +141,7 @@ ULOSE	MVI		C,PITCH
 		MVI		C,PITCH
 		LXI		D,0h
 		CALL	MOS
-		RST		7
+RETMOS	RST		7
 ; Subroutines
 P_GRN	CALL	F_GRN
 		MVI		L,2h
@@ -221,6 +235,9 @@ LEDSTR	EQU		1Ah
 		; In:		Register E; number of displays to change (1-6).
 		; In:		Register D; starting display (5-0).
 		; In:		Register HL; starting addr. of bit pattern data.
+UPRINT	EQU		05h
+		; In:		Register DE; 16-bit number to print.
+
 ; Constants
 		; Ports
 TIMERCD	EQU		10h
@@ -237,6 +254,7 @@ GRNTN	EQU		0746h
 LOSS	EQU		0F00h
 
 LEDNAM	DB		97h,85h,47h,0CDh,0F7h,0D6h
+SCOREBD	DB		01Bh,05Bh,032h,031h,03Bh,033h,030h,048h,01Bh,05Bh,032h,04Bh,'S','c','o','r','e',':',' ',024h
 SPLASH	DB		01Bh,05Bh,03Fh,037h,068h,01Bh,05Bh,034h,030h,06Dh,01Bh,05Bh,032h,04Ah,01Bh
 		DB		05Bh,034h,030h,06Dh,00Dh,00Ah,01Bh,05Bh,030h,03Bh,031h,06Dh,01Bh,05Bh,039h
 		DB		043h,01Bh,05Bh,033h,035h,06Dh,0DCh,0DBh,0DBh,0DBh,0DBh,0DBh,0DBh,020h,01Bh
@@ -334,7 +352,7 @@ GAMEBD	DB		01Bh,05Bh,03Fh,037h,068h,01Bh,05Bh,034h,030h,06Dh,01Bh,05Bh,032h,04Ah
 		DB		0B1h,0B1h,00Dh,00Ah,01Bh,05Bh,032h,039h,043h,01Bh,05Bh,031h,03Bh,033h,033h
 		DB		06Dh,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,020h,020h,01Bh,05Bh
 		DB		030h,03Bh,033h,034h,06Dh,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h
-		DB		020h,020h,01Bh,05Bh,031h,03Bh,033h,030h,06Dh,022h,051h,022h,020h,074h,06Fh
+		DB		020h,020h,01Bh,05Bh,031h,03Bh,033h,030h,06Dh,022h,071h,022h,020h,074h,06Fh
 		DB		020h,071h,075h,069h,074h,020h,061h,06Eh,064h,00Dh,00Ah,01Bh,05Bh,032h,039h
 		DB		043h,01Bh,05Bh,033h,033h,06Dh,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h,0B1h
 		DB		0B1h,020h,020h,01Bh,05Bh,030h,03Bh,033h,034h,06Dh,0B1h,0B1h,0B1h,0B1h,0B1h
