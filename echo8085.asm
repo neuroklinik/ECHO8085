@@ -27,7 +27,7 @@
 		LXI		D,0506h
 		LXI		H,LEDNAM
 		CALL	MOS
-; Game splash to the console.
+; Print the game splash to the console.
 		MVI		C,PSTR
 		LXI		D,SPLASH
 		CALL	MOS
@@ -37,9 +37,9 @@
 		MOV	A,L
 		CPI		079h
 		JZ		PRNG
-		RST		7 ; End and return to MOS.
+		RST		7			; End and return to MOS.
 ; Start of the game code. Just testing stuff for now.
-; Load the random number sequence.
+; Generate the random number sequence.
 PRNG	LXI		H,RNDNMS
 		MVI		C,032h
 		IN		TIMERLO
@@ -53,17 +53,21 @@ PRNGLP	MOV	B,A
 NOXOR	INX		H
 		DCR		C
 		JNZ		PRNGLP
+; Print the game board to the console.
 GAME	MVI		C,PSTR
 		LXI		D,GAMEBD
 		CALL	MOS
+; Load the starting sequence length, 1.
 		LXI		H,SEQLEN
 		MVI		M,01h
-STRSEQ	MOV	C,M
-		LXI		D,RNDNMS
-PLYSEQ	LDAX	D
-		PUSH	D
-		PUSH	B
-		CPI		0h
+; 
+STRSEQ	MOV	C,M			; The C register is our counter to decrement to run through the sequence.
+		LXI		D,RNDNMS	; Load the DE register with the memory location for the current random number.
+; Computer plays through the sequence once.
+PLYSEQ	LDAX	D			; Load the current random number into the accumulator.
+		PUSH	D			; Preserve DE, holding the memory location in the random number sequence.
+		PUSH	B			; Preserve BC, holding where we are in the sequence.
+		CPI		0h			; Flash the proper color, play the proper tone.
 		CZ		F_YLW
 		CPI		1h
 		CZ		F_BLU
@@ -71,23 +75,72 @@ PLYSEQ	LDAX	D
 		CZ		F_GRN
 		CPI		3h
 		CZ		F_RED
-		POP		B
-		POP		D
-		INX		D
-		DCR		C
-		JNZ		PLYSEQ
-		MVI		C,DELAY
-		LXI		H,03FFFh
-		CALL	MOS
-		CALL	MOS
+		POP		B			; Restore BC.
+		POP		D			; Restore DE.
+		INX		D			; Increment DE, moving to the next random number in the sequence.
+		DCR		C			; Decrement C, the counter for this iteration through the sequence.
+		JNZ		PLYSEQ		; If we're not all the way through, jump back and play the next random number.
+; Players turn to repeat.
 		LXI		H,SEQLEN
-		INR		M
-		MVI		A,08h
-		CMP	M
-		JNZ		STRSEQ
-		RST		7 ; End and return to MOS.
-
+		MOV	C,M
+		LXI		D,RNDNMS
+RPTSEQ	PUSH	B
+		PUSH	D
+		MVI		C,CONIN		; Wait for the player to press a key,
+		CALL	MOS			; and store the ASCII value in L.
+		MOV	A,L			; Move the value into the accumulator for comparisons.
+		CPI		031h		; Did the player press "1" for Yellow?
+		CZ		P_YLW
+		CPI		032h		; Did the player press "2" for Blue?
+		CZ		P_BLU
+		CPI		034h		; Did the player press "4" for Green?
+		CZ		P_GRN
+		CPI		035h		; Did the player press "5" for Red?
+		CZ		P_RED
+		POP		D
+		POP		B
+		LDAX	D			; Load the current random number into the accumulator.
+		;PUSH	D			; Preserve DE, holding the memory location in the random number sequence.
+		;PUSH	B			; Preserve BC, holding where we are in the sequence.
+		CMP	L			; Did the player press the correct key?
+		JNZ		ULOSE		; No? Game over.
+		INX		D			; Increment DE, moving to the next random number in the sequence.
+		DCR		C			; Decrement C, the counter for this iteration through the sequence.
+		JNZ		RPTSEQ		; If we're not at the end of the sequence, repeat with the next entry.
+		;MVI		C,DELAY		; A delay between the sequences, temporary until player repeat portion is written.
+		;LXI		H,03FFFh		; A big delay value.
+		;CALL	MOS			;
+		;CALL	MOS			; Twice.
+; If the player repeats correctly.
+		LXI		H,SEQLEN	; Move the memory address for the current sequence length (aka score) into HL.
+		INR		M			; Increment the value in the memory location, adding one to the player's score and length of the sequence.
+		MVI		A,08h		; Move the maximum possible score into the accumulator.
+		CMP	M			; Compare with the current sequence length.
+		JNZ		STRSEQ		; Not yet at maximum? Allow the player to continue.
+		RST		7			; End and return to MOS.
+ULOSE	MVI		C,PITCH
+		LXI		D,LOSS
+		CALL	MOS
+		MVI		C,DELAY
+		LXI		H,0FFFFh
+		CALL	MOS
+		MVI		C,PITCH
+		LXI		D,0h
+		CALL	MOS
+		RST		7
 ; Subroutines
+P_GRN	CALL	F_GRN
+		MVI		L,2h
+		RET
+P_RED	CALL	F_RED
+		MVI		L,3h
+		RET
+P_YLW	CALL	F_YLW
+		MVI		L,0h
+		RET
+P_BLU	CALL	F_BLU
+		MVI		L,1h
+		RET
 F_GRN	MVI		C,PSTR
 		LXI		D,ONGRN
 		CALL	MOS
@@ -181,6 +234,7 @@ BLUTN	EQU		03A4h
 YLWTN	EQU		0454h
 REDTN	EQU		0574h
 GRNTN	EQU		0746h
+LOSS	EQU		0F00h
 
 LEDNAM	DB		97h,85h,47h,0CDh,0F7h,0D6h
 SPLASH	DB		01Bh,05Bh,03Fh,037h,068h,01Bh,05Bh,034h,030h,06Dh,01Bh,05Bh,032h,04Ah,01Bh
