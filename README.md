@@ -29,6 +29,11 @@ The development environment that is used to write, debug, and play ECHO8085 cons
 - [TheDraw](https://en.wikipedia.org/wiki/TheDraw), a DOS-based editor for ANSI & ASCII graphics
 Alternative tools could serve similar purposes in this environment.
 
+### The Code
+The game code is written in Intel 8085 assembly language, and relies heavily on routines built into the Primer's Monitor Operating System (MOS) ROM. These routines handle all I/O to the serial console, reading from the DIP switches and writing to the 7-segment and status LEDs, and producing audio tones.
+
+The code can be assembled using any compatible cross-assembler, with ouput in [Intel HEX](https://en.wikipedia.org/wiki/Intel_HEX) format. The HEX file is then uploaded to RAM on the Primer. The code relies on absolute memory addressing, with a start address at 0xC000. Once loaded, the Primer's keypad and LED I/O to the MOS can be used to set the program counter address to 0xC000 and begin exeuction from that memory address. Input and ouput then proceeds to the attached serial console.
+
 ### The Game
 ECHO8085 is a memory game modeled after [Simon](https://en.wikipedia.org/wiki/Simon_(game)). The computer creates a random sequence of flashing "light" and tone combinations, which increases in length by one each time the player repeats the sequence correctly. If the sequence is not repeated correctly, the game ends.
 
