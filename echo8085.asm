@@ -1,5 +1,5 @@
 ; ECHO8085
-; A Simon-like game for the EMAC "The PRIMER" 8085 Trainer.
+; A Simon-like game for the EMAC "The PRIMER" 8085 CPU Trainer.
 ; Written in Intel 8085 Assembly Language.
 ; Uses EMAC MOS v2.7 ROM calls.
 ; Christopher Fox
@@ -128,7 +128,7 @@ RPTSEQ	PUSH	B
 		MVI		D,0h
 		CALL	MOS
 		INR		M			; Increment the value in the memory location, adding one to the player's score and length of the sequence.
-		MVI		A,07h		; Move the maximum possible score into the accumulator.
+		MVI		A,MAXSCOR	; Move the maximum possible score into the accumulator.
 		CMP	M			; Compare with the current sequence length.
 		JNZ		STRSEQ		; Not yet at maximum? Allow the player to continue.
 		RST		7			; End and return to MOS.
@@ -253,6 +253,7 @@ REDTN	EQU		0574h
 GRNTN	EQU		0746h
 LOSS	EQU		0F00h
 
+MAXSCOR	EQU		32h
 LEDNAM	DB		97h,85h,47h,0CDh,0F7h,0D6h
 SCOREBD	DB		01Bh,05Bh,032h,031h,03Bh,033h,030h,048h,01Bh,05Bh,032h,04Bh,'S','c','o','r','e',':',' ',024h
 SPLASH	DB		01Bh,05Bh,03Fh,037h,068h,01Bh,05Bh,034h,030h,06Dh,01Bh,05Bh,032h,04Ah,01Bh
